@@ -8,6 +8,19 @@ struct PortableSmoke {
             return
         }
         let profile = try ProxyProfile(address: "https://proxy.example:443", expectedIP: "203.0.113.9", username: "user", password: "pass")
+        for host in ["test.example", "api.anthropic.com", "www.cloudflare.com.", "phone.local.example",
+                     "1.1.1.1", "192.0.0.9", "100.63.255.254", "100.128.0.1"] {
+            precondition(ResidentialTarget.allows(host), "A public target was rejected")
+        }
+        for host in ["phone.local", "PHONE.LOCAL.", "phone.lan", "localhost", "phone",
+                     "phone.localdomain", "phone.localhost", "home.arpa", "router.home.arpa",
+                     "0.0.0.0", "10.1.2.3", "127.0.0.1", "127.1", "0x7f.1",
+                     "0177.0.0.1", "0x7f000001",
+                     "169.254.1.1", "172.16.1.1", "192.168.2.3", "100.64.1.1",
+                     "198.18.0.1", "192.0.2.1", "203.0.113.9", "224.0.0.251",
+                     "255.255.255.255", "::1", "2606:4700:4700::1111"] {
+            precondition(!ResidentialTarget.allows(host), "A local or reserved target was accepted")
+        }
         precondition(LauncherSupport.hideIPv4(in: "203.0.113.9 / 198.51.100.20") == "203.•••.•••.9 / 198.•••.•••.20")
         do {
             try LauncherSupport.verifyExit(body: "ip=2001:db8::10\n", http: 200, expected: profile.expectedIP)

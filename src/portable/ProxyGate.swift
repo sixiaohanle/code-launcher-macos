@@ -57,6 +57,46 @@ struct LocalProxy {
     }
 }
 
+enum ResidentialTarget {
+    static func allows(_ hostname: String) -> Bool {
+        let host = hostname.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
+        var address = in_addr()
+        if host.withCString({ inet_pton(AF_INET, $0, &address) }) == 1 {
+            // Darwin accepts leading-zero octets. Upstream resolvers may treat
+            // those as octal, so accept only the unambiguous dotted form.
+            let octets = host.split(separator: ".")
+            guard octets.count == 4, octets.allSatisfy({ $0 == "0" || !$0.hasPrefix("0") }) else { return false }
+            let value = UInt32(bigEndian: address.s_addr)
+            // These two IANA protocol-assignment addresses are publicly reachable.
+            if value == 0xC0000009 || value == 0xC000000A { return true }
+            let excluded: [(network: UInt32, mask: UInt32)] = [
+                (0x00000000, 0xFF000000), // 0.0.0.0/8, this network
+                (0x0A000000, 0xFF000000), // 10.0.0.0/8, private
+                (0x64400000, 0xFFC00000), // 100.64.0.0/10, shared address space
+                (0x7F000000, 0xFF000000), // 127.0.0.0/8, loopback
+                (0xA9FE0000, 0xFFFF0000), // 169.254.0.0/16, link-local
+                (0xAC100000, 0xFFF00000), // 172.16.0.0/12, private
+                (0xC0000000, 0xFFFFFF00), // 192.0.0.0/24, protocol assignments
+                (0xC0000200, 0xFFFFFF00), // 192.0.2.0/24, documentation
+                (0xC0A80000, 0xFFFF0000), // 192.168.0.0/16, private
+                (0xC6120000, 0xFFFE0000), // 198.18.0.0/15, benchmarks
+                (0xC6336400, 0xFFFFFF00), // 198.51.100.0/24, documentation
+                (0xCB007100, 0xFFFFFF00), // 203.0.113.0/24, documentation
+                (0xE0000000, 0xE0000000), // 224.0.0.0/3, multicast and reserved
+            ]
+            return !excluded.contains { value & $0.mask == $0.network }
+        }
+        let localNames = ["local", "lan", "localhost", "localdomain", "home.arpa"]
+        guard !localNames.contains(where: { host == $0 || host.hasSuffix("." + $0) }) else { return false }
+        // Requiring a multi-label DNS name with an alphabetic TLD also rejects
+        // single-label device names, IPv6 and non-canonical numeric IP forms.
+        return host.range(
+            of: #"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$"#,
+            options: .regularExpression
+        ) != nil
+    }
+}
+
 final class ProxyGate {
     private let queue = DispatchQueue(label: "local.code-launcher.proxy")
     private let profile: ProxyProfile
@@ -204,6 +244,9 @@ private final class Tunnel {
                 self.reject("403 Forbidden"); return
             }
             guard let auth, let probe = authorize(auth) else { self.reject("403 Forbidden"); return }
+            guard ResidentialTarget.allows(String(request[1].dropLast(4))) else {
+                self.reject("403 Local target blocked"); return
+            }
             self.isProbe = probe
             self.connect(to: String(request[1]), pending: rest)
         }

@@ -6,7 +6,7 @@ stage="$PWD/build/portable"
 disk="$stage/disk"
 app="$disk/Code 启动器.app"
 binary="$app/Contents/MacOS/CodeLauncher"
-out="$PWD/deliveries/便携版-0.1.1"
+out="$PWD/deliveries/便携版-0.1.2"
 identifier=local.code-launcher.mac
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" build/module-cache "$out"
 
@@ -53,8 +53,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
     <key>CFBundleName</key><string>Code 启动器</string>
     <key>CFBundleDisplayName</key><string>Code 启动器</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1.1</string>
-    <key>CFBundleVersion</key><string>2</string>
+    <key>CFBundleShortVersionString</key><string>0.1.2</string>
+    <key>CFBundleVersion</key><string>3</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSHighResolutionCapable</key><true/>
@@ -67,7 +67,7 @@ PLIST
 /usr/bin/xattr -cr "$app"
 test -L "$disk/Applications" || /bin/ln -s /Applications "$disk/Applications"
 /bin/cp src/portable/安装说明.txt "$disk/安装说明.txt"
-image="$out/Code启动器-0.1.1-macOS.dmg"
+image="$out/Code启动器-0.1.2-macOS.dmg"
 /usr/bin/hdiutil create -ov -volname 'Code 启动器' -fs HFS+ -format UDZO -srcfolder "$disk" "$image"
 /usr/bin/hdiutil verify "$image"
 (cd "$out" && /usr/bin/shasum -a 256 "${image:t}" > SHA256.txt)

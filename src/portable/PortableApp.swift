@@ -334,7 +334,7 @@ private struct LauncherView: View {
                             Text("预期出口  \(hiddenExitText)").monospacedDigit()
                             Text("点击眼睛查看或编辑线路。").font(.caption).foregroundStyle(.secondary)
                         }
-                        Text("专用线路只保护遵循代理设置的 HTTPS 连接。登录浏览器及忽略代理的外部工具使用各自的网络。")
+                        Text("专用线路只保护遵循代理设置的 HTTPS 连接。登录前请单独配置浏览器代理，并在该浏览器中核对出口，详见执行文档。")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }.padding(8)
